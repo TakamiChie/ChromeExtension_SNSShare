@@ -5,7 +5,8 @@
   "description": "現在のページのタイトルとURLを各SNSの投稿画面で共有するChrome拡張機能",
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "<all_urls>"
