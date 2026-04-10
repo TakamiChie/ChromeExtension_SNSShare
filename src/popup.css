@@ -44,6 +44,16 @@ h1 {
   margin: 0;
 }
 
+textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #8884;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
 .secondary {
   width: 100%;
 }
