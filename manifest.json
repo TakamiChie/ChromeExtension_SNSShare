@@ -3,6 +3,11 @@
   "name": "SNS Share Intent Launcher",
   "version": "1.0.0",
   "description": "現在のページのタイトルとURLを各SNSの投稿画面で共有するChrome拡張機能",
+  "icons": {
+    "32": "icons/32x32.png",
+    "48": "icons/48x48.png",
+    "128": "icons/128x128.png"
+  },
   "permissions": [
     "tabs",
     "storage",
