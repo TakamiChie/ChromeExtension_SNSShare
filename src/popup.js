@@ -75,23 +75,36 @@ async function openIntent(service) {
 
 async function init() {
   const pageInfo = document.getElementById('pageInfo');
+  const shareButton = document.getElementById('shareButton');
   const openOptionsButton = document.getElementById('openOptions');
 
+  let tab, mastodonInstance, title;
+
   try {
-    const tab = await getActiveTab();
+    tab = await getActiveTab();
+    const storage = await chrome.storage.sync.get('mastodonInstance');
+    mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
+    title = tab.title || tab.url;
     pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
   } catch (error) {
     pageInfo.textContent = error.message;
+    return;
   }
 
-  document.querySelectorAll('[data-service]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      try {
-        await openIntent(button.dataset.service);
-      } catch (error) {
-        pageInfo.textContent = error.message;
-      }
-    });
+  shareButton.addEventListener('click', async () => {
+    const checkedServices = Array.from(document.querySelectorAll('input[data-service]:checked')).map(cb => cb.dataset.service);
+    if (checkedServices.length === 0) {
+      pageInfo.textContent = 'SNSを選択してください。';
+      return;
+    }
+    try {
+      await Promise.all(checkedServices.map(service => {
+        const intentUrl = createIntentUrl(service, title, tab.url, mastodonInstance);
+        return chrome.tabs.create({ url: intentUrl });
+      }));
+    } catch (error) {
+      pageInfo.textContent = error.message;
+    }
   });
 
   openOptionsButton.addEventListener('click', () => {

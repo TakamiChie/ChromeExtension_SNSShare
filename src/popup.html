@@ -1,22 +1,25 @@
 <!doctype html>
 <html lang="ja">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SNS共有</title>
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <main class="container">
     <h1>SNSに共有</h1>
     <p id="pageInfo" class="page-info">現在のタブを取得中...</p>
-    <div class="button-list">
-      <button data-service="facebook">Facebook</button>
-      <button data-service="x">X</button>
-      <button data-service="bluesky">Bluesky</button>
-      <button data-service="mastodon">Mastodon</button>
-      <button data-service="threads">Threads</button>
+    <div class="checkbox-list">
+      <label><input type="checkbox" data-service="facebook"> Facebook</label>
+      <label><input type="checkbox" data-service="x"> X</label>
+      <label><input type="checkbox" data-service="bluesky"> Bluesky</label>
+      <label><input type="checkbox" data-service="mastodon"> Mastodon</label>
+      <label><input type="checkbox" data-service="threads"> Threads</label>
     </div>
+    <button id="shareButton">共有</button>
     <div class="footer">
       <button id="openOptions" class="secondary">設定を開く</button>
     </div>
@@ -26,4 +29,5 @@
   </main>
   <script src="popup.js"></script>
 </body>
+
 </html>
