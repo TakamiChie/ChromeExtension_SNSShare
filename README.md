@@ -1,0 +1,2 @@
+# ChromeExtension_SNSShare
+各種SNSにURLを共有するタブページを一斉に開く拡張機能
