@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light dark;
+  font-family: sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+.container {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.page-info {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.button-list {
+  display: grid;
+  gap: 8px;
+}
+
+button {
+  border: 1px solid #8884;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.secondary {
+  width: 100%;
+}
+
+.footer {
+  margin-top: 12px;
+}
+
+.note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #666;
+}

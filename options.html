@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="container">
+    <h1>SNS Share Intent Launcher 設定</h1>
+    <form id="settingsForm">
+      <label for="mastodonInstance">MastodonインスタンスURL</label>
+      <input id="mastodonInstance" name="mastodonInstance" type="text" placeholder="https://mastodon.social">
+      <p class="help">例: https://mstdn.jp</p>
+      <button type="submit">保存</button>
+      <p id="status" class="status"></p>
+    </form>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

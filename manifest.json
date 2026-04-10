@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "SNS Share Intent Launcher",
+  "version": "1.0.0",
+  "description": "現在のページのタイトルとURLを各SNSの投稿画面で共有するChrome拡張機能",
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "SNSに共有",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}
