@@ -13,7 +13,8 @@
     <h1>SNSに共有</h1>
     <p id="pageInfo" class="page-info">現在のタブを取得中...</p>
     <div class="checkbox-list">
-      <label><input type="checkbox" data-service="facebook"> Facebook</label>
+      <label><input type="checkbox" data-service="facebook"
+          title="Facebookは仕様上、URLは共有できますが、タイトル文言の事前入力は環境によって反映されないことがあります。"> Facebook</label>
       <label><input type="checkbox" data-service="x"> X</label>
       <label><input type="checkbox" data-service="bluesky"> Bluesky</label>
       <label><input type="checkbox" data-service="mastodon"> Mastodon</label>
@@ -23,9 +24,6 @@
     <div class="footer">
       <button id="openOptions" class="secondary">設定を開く</button>
     </div>
-    <p class="note">
-      Facebookは仕様上、URLは共有できますが、タイトル文言の事前入力は環境によって反映されないことがあります。
-    </p>
   </main>
   <script src="popup.js"></script>
 </body>
