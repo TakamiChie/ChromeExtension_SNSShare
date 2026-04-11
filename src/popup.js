@@ -1,4 +1,5 @@
 const DEFAULT_MASTODON_INSTANCE = 'https://mastodon.social';
+const CHECKBOX_STATE_STORAGE_KEY = 'checkedServices';
 
 function normalizeMastodonInstance(input) {
   const value = (input || '').trim();
@@ -53,6 +54,19 @@ function createIntentUrl(service, text, url, mastodonInstance) {
   }
 }
 
+function loadCheckedServices() {
+  const savedValue = localStorage.getItem(CHECKBOX_STATE_STORAGE_KEY);
+  if (!savedValue) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(savedValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -94,8 +108,23 @@ async function init() {
     return;
   }
 
+  const serviceCheckboxes = Array.from(document.querySelectorAll('input[data-service]'));
+  const savedCheckedServices = loadCheckedServices();
+  const savedCheckedServiceSet = new Set(savedCheckedServices);
+  serviceCheckboxes.forEach((checkbox) => {
+    checkbox.checked = savedCheckedServiceSet.has(checkbox.dataset.service);
+    checkbox.addEventListener('change', () => {
+      const checkedServices = serviceCheckboxes
+        .filter((item) => item.checked)
+        .map((item) => item.dataset.service);
+      localStorage.setItem(CHECKBOX_STATE_STORAGE_KEY, JSON.stringify(checkedServices));
+    });
+  });
+
   shareButton.addEventListener('click', async () => {
-    const checkedServices = Array.from(document.querySelectorAll('input[data-service]:checked')).map(cb => cb.dataset.service);
+    const checkedServices = serviceCheckboxes
+      .filter((item) => item.checked)
+      .map((item) => item.dataset.service);
     if (checkedServices.length === 0) {
       pageInfo.textContent = 'SNSを選択してください。';
       return;
