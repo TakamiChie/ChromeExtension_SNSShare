@@ -72,6 +72,117 @@ async function getActiveTab() {
   return tab;
 }
 
+function normalizeComparableUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const normalizedPath = parsed.pathname.replace(/\/$/, '') || '/';
+    return `${parsed.origin}${normalizedPath}${parsed.search}`;
+  } catch {
+    return '';
+  }
+}
+
+function isInstagramPostPage(url) {
+  try {
+    const parsed = new URL(url);
+    const pathSegments = parsed.pathname.split('/').filter(Boolean);
+    const hasPostSegment = pathSegments.some((segment) => segment === 'p' || segment === 'reel');
+    return parsed.hostname.includes('instagram.com') && hasPostSegment;
+  } catch {
+    return false;
+  }
+}
+
+function waitForTabComplete(tabId, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    let timeoutId;
+
+    const cleanup = () => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      clearTimeout(timeoutId);
+    };
+
+    const onUpdated = (updatedTabId, changeInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        cleanup();
+        resolve();
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Instagramページの再読み込みがタイムアウトしました。'));
+    }, timeoutMs);
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+  });
+}
+
+
+function extractInstagramPostBody(description) {
+  const trimmedDescription = (description || '').trim();
+  if (!trimmedDescription) {
+    return '';
+  }
+
+  let bodyCandidate = trimmedDescription;
+  const colonIndex = bodyCandidate.search(/[:：]/);
+  if (colonIndex >= 0) {
+    bodyCandidate = bodyCandidate.slice(colonIndex + 1);
+  }
+
+  const quoteIndex = bodyCandidate.search(/["“”'‘’「」]/);
+  if (quoteIndex >= 0) {
+    bodyCandidate = bodyCandidate.slice(quoteIndex + 1);
+  }
+
+  const blankLineMatch = bodyCandidate.match(/\n\s*\n/);
+  if (blankLineMatch && typeof blankLineMatch.index === 'number') {
+    bodyCandidate = bodyCandidate.slice(0, blankLineMatch.index);
+  }
+
+  const normalizedBody = bodyCandidate.trim();
+  if (!normalizedBody) {
+    return '';
+  }
+
+  return normalizedBody.slice(0, 100).trim();
+}
+
+async function getOgMeta(tabId) {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      const descriptionMeta = document.querySelector('meta[property="og:description"]');
+      const urlMeta = document.querySelector('meta[property="og:url"]');
+      return {
+        description: descriptionMeta?.getAttribute('content')?.trim() || '',
+        ogUrl: urlMeta?.getAttribute('content')?.trim() || ''
+      };
+    }
+  });
+  return result?.result || { description: '', ogUrl: '' };
+}
+
+async function buildDefaultShareText(tab) {
+  if (!tab?.url || !isInstagramPostPage(tab.url)) {
+    return createShareText(tab.title || tab.url, tab.url);
+  }
+
+  let ogMeta = await getOgMeta(tab.id);
+  const currentPageUrl = normalizeComparableUrl(tab.url);
+  const currentOgUrl = normalizeComparableUrl(ogMeta.ogUrl);
+  if (!ogMeta.description || !currentOgUrl || currentPageUrl !== currentOgUrl) {
+    const waitLoadPromise = waitForTabComplete(tab.id);
+    await chrome.tabs.reload(tab.id);
+    await waitLoadPromise;
+    ogMeta = await getOgMeta(tab.id);
+  }
+
+  const postBody = extractInstagramPostBody(ogMeta.description);
+  return createShareText(postBody || tab.title || tab.url, tab.url);
+}
+
 async function openIntent(service, text, url, mastodonInstance) {
   if (service === 'mixi2') {
     await navigator.clipboard.writeText(text);
@@ -88,7 +199,7 @@ async function init() {
   const shareButton = document.getElementById('shareButton');
   const openOptionsButton = document.getElementById('openOptions');
 
-  let tab, mastodonInstance, defaultText;
+  let tab, mastodonInstance;
 
   try {
     tab = await getActiveTab();
@@ -100,7 +211,7 @@ async function init() {
     }
     const storage = await chrome.storage.sync.get('mastodonInstance');
     mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
-    defaultText = createShareText(tab.title || tab.url, tab.url);
+    const defaultText = await buildDefaultShareText(tab);
     shareText.value = defaultText;
     pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
   } catch (error) {
@@ -135,7 +246,7 @@ async function init() {
       return;
     }
     try {
-      await Promise.all(checkedServices.map(service => openIntent(service, text, tab.url, mastodonInstance)));
+      await Promise.all(checkedServices.map((service) => openIntent(service, text, tab.url, mastodonInstance)));
     } catch (error) {
       pageInfo.textContent = error.message;
     }
