@@ -211,15 +211,18 @@ async function init() {
     }
     const storage = await chrome.storage.sync.get('mastodonInstance');
     mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
-    let defaultText = await buildDefaultShareText(tab);
+    const defaultText = await buildDefaultShareText(tab);
     if (pendingContext && pendingContext.url === tab.url) {
-      defaultText = pendingContext.text || defaultText;
+      const initialText = isInstagramPostPage(tab.url)
+        ? defaultText
+        : (pendingContext.text || defaultText);
       pageInfo.textContent = `タイトル: ${pendingContext.title || tab?.title || '(取得不可)'}\nURL: ${pendingContext.url || tab?.url || '(取得不可)'}\n右クリックメニューから開きました。内容を確認して共有してください。`;
       await chrome.storage.local.remove(PENDING_SHARE_CONTEXT_STORAGE_KEY);
+      shareText.value = initialText;
     } else {
       pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
+      shareText.value = defaultText;
     }
-    shareText.value = defaultText;
   } catch (error) {
     pageInfo.textContent = error.message;
     return;
