@@ -85,7 +85,9 @@ function normalizeComparableUrl(url) {
 function isInstagramPostPage(url) {
   try {
     const parsed = new URL(url);
-    return parsed.hostname.includes('instagram.com') && /^\/(p|reel)\//.test(parsed.pathname);
+    const pathSegments = parsed.pathname.split('/').filter(Boolean);
+    const hasPostSegment = pathSegments.some((segment) => segment === 'p' || segment === 'reel');
+    return parsed.hostname.includes('instagram.com') && hasPostSegment;
   } catch {
     return false;
   }
