@@ -106,6 +106,37 @@ function waitForTabComplete(tabId, timeoutMs = 15000) {
   });
 }
 
+
+function extractInstagramPostBody(description) {
+  const trimmedDescription = (description || '').trim();
+  if (!trimmedDescription) {
+    return '';
+  }
+
+  let bodyCandidate = trimmedDescription;
+  const colonIndex = bodyCandidate.search(/[:：]/);
+  if (colonIndex >= 0) {
+    bodyCandidate = bodyCandidate.slice(colonIndex + 1);
+  }
+
+  const quoteIndex = bodyCandidate.search(/["“”'‘’「」]/);
+  if (quoteIndex >= 0) {
+    bodyCandidate = bodyCandidate.slice(quoteIndex + 1);
+  }
+
+  const blankLineMatch = bodyCandidate.match(/\n\s*\n/);
+  if (blankLineMatch && typeof blankLineMatch.index === 'number') {
+    bodyCandidate = bodyCandidate.slice(0, blankLineMatch.index);
+  }
+
+  const normalizedBody = bodyCandidate.trim();
+  if (!normalizedBody) {
+    return '';
+  }
+
+  return normalizedBody.slice(0, 100).trim();
+}
+
 async function getOgDescription(tabId) {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId },
@@ -130,7 +161,8 @@ async function buildDefaultShareText(tab) {
     description = await getOgDescription(tab.id);
   }
 
-  return createShareText(description || tab.title || tab.url, tab.url);
+  const postBody = extractInstagramPostBody(description);
+  return createShareText(postBody || tab.title || tab.url, tab.url);
 }
 
 async function openIntent(service, text, url, mastodonInstance) {
