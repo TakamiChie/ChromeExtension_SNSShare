@@ -72,6 +72,67 @@ async function getActiveTab() {
   return tab;
 }
 
+function isInstagramPostPage(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.includes('instagram.com') && /^\/(p|reel)\//.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function waitForTabComplete(tabId, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    let timeoutId;
+
+    const cleanup = () => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      clearTimeout(timeoutId);
+    };
+
+    const onUpdated = (updatedTabId, changeInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        cleanup();
+        resolve();
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Instagramページの再読み込みがタイムアウトしました。'));
+    }, timeoutMs);
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+  });
+}
+
+async function getOgDescription(tabId) {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      const meta = document.querySelector('meta[property="og:description"]');
+      return meta?.getAttribute('content')?.trim() || '';
+    }
+  });
+  return result?.result || '';
+}
+
+async function buildDefaultShareText(tab) {
+  if (!tab?.url || !isInstagramPostPage(tab.url)) {
+    return createShareText(tab.title || tab.url, tab.url);
+  }
+
+  let description = await getOgDescription(tab.id);
+  if (!description) {
+    const waitLoadPromise = waitForTabComplete(tab.id);
+    await chrome.tabs.reload(tab.id);
+    await waitLoadPromise;
+    description = await getOgDescription(tab.id);
+  }
+
+  return createShareText(description || tab.title || tab.url, tab.url);
+}
+
 async function openIntent(service, text, url, mastodonInstance) {
   if (service === 'mixi2') {
     await navigator.clipboard.writeText(text);
@@ -88,7 +149,7 @@ async function init() {
   const shareButton = document.getElementById('shareButton');
   const openOptionsButton = document.getElementById('openOptions');
 
-  let tab, mastodonInstance, defaultText;
+  let tab, mastodonInstance;
 
   try {
     tab = await getActiveTab();
@@ -100,7 +161,7 @@ async function init() {
     }
     const storage = await chrome.storage.sync.get('mastodonInstance');
     mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
-    defaultText = createShareText(tab.title || tab.url, tab.url);
+    const defaultText = await buildDefaultShareText(tab);
     shareText.value = defaultText;
     pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
   } catch (error) {
@@ -135,7 +196,7 @@ async function init() {
       return;
     }
     try {
-      await Promise.all(checkedServices.map(service => openIntent(service, text, tab.url, mastodonInstance)));
+      await Promise.all(checkedServices.map((service) => openIntent(service, text, tab.url, mastodonInstance)));
     } catch (error) {
       pageInfo.textContent = error.message;
     }
