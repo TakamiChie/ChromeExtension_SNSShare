@@ -9,10 +9,11 @@
     "128": "icons/128x128.png"
   },
   "permissions": [
-    "tabs",
-    "storage",
     "clipboardWrite",
-    "scripting"
+    "contextMenus",
+    "scripting",
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -21,5 +22,8 @@
     "default_title": "SNSに共有",
     "default_popup": "src/popup.html"
   },
-  "options_page": "src/options.html"
+  "options_page": "src/options.html",
+  "background": {
+    "service_worker": "src/background.js"
+  }
 }

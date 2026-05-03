@@ -1,5 +1,6 @@
 const DEFAULT_MASTODON_INSTANCE = 'https://mastodon.social';
-const CHECKBOX_STATE_STORAGE_KEY = 'checkedServices';
+const CHECKED_SERVICES_STORAGE_KEY = 'checkedServices';
+const PENDING_SHARE_CONTEXT_STORAGE_KEY = 'pendingShareContext';
 
 function normalizeMastodonInstance(input) {
   const value = (input || '').trim();
@@ -54,17 +55,15 @@ function createIntentUrl(service, text, url, mastodonInstance) {
   }
 }
 
-function loadCheckedServices() {
-  const savedValue = localStorage.getItem(CHECKBOX_STATE_STORAGE_KEY);
-  if (!savedValue) {
-    return [];
-  }
-  try {
-    const parsed = JSON.parse(savedValue);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+async function loadCheckedServices() {
+  const result = await chrome.storage.local.get(CHECKED_SERVICES_STORAGE_KEY);
+  const savedValue = result[CHECKED_SERVICES_STORAGE_KEY];
+  return Array.isArray(savedValue) ? savedValue : [];
+}
+
+async function loadPendingShareContext() {
+  const result = await chrome.storage.local.get(PENDING_SHARE_CONTEXT_STORAGE_KEY);
+  return result[PENDING_SHARE_CONTEXT_STORAGE_KEY] || null;
 }
 
 async function getActiveTab() {
@@ -202,6 +201,7 @@ async function init() {
   let tab, mastodonInstance;
 
   try {
+    const pendingContext = await loadPendingShareContext();
     tab = await getActiveTab();
     if (!tab || !tab.url) {
       throw new Error('現在のタブのURLを取得できませんでした。');
@@ -212,15 +212,24 @@ async function init() {
     const storage = await chrome.storage.sync.get('mastodonInstance');
     mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
     const defaultText = await buildDefaultShareText(tab);
-    shareText.value = defaultText;
-    pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
+    if (pendingContext && pendingContext.url === tab.url) {
+      const initialText = isInstagramPostPage(tab.url)
+        ? defaultText
+        : (pendingContext.text || defaultText);
+      pageInfo.textContent = `タイトル: ${pendingContext.title || tab?.title || '(取得不可)'}\nURL: ${pendingContext.url || tab?.url || '(取得不可)'}\n右クリックメニューから開きました。内容を確認して共有してください。`;
+      await chrome.storage.local.remove(PENDING_SHARE_CONTEXT_STORAGE_KEY);
+      shareText.value = initialText;
+    } else {
+      pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
+      shareText.value = defaultText;
+    }
   } catch (error) {
     pageInfo.textContent = error.message;
     return;
   }
 
   const serviceCheckboxes = Array.from(document.querySelectorAll('input[data-service]'));
-  const savedCheckedServices = loadCheckedServices();
+  const savedCheckedServices = await loadCheckedServices();
   const savedCheckedServiceSet = new Set(savedCheckedServices);
   serviceCheckboxes.forEach((checkbox) => {
     checkbox.checked = savedCheckedServiceSet.has(checkbox.dataset.service);
@@ -228,7 +237,7 @@ async function init() {
       const checkedServices = serviceCheckboxes
         .filter((item) => item.checked)
         .map((item) => item.dataset.service);
-      localStorage.setItem(CHECKBOX_STATE_STORAGE_KEY, JSON.stringify(checkedServices));
+      chrome.storage.local.set({ [CHECKED_SERVICES_STORAGE_KEY]: checkedServices });
     });
   });
 
