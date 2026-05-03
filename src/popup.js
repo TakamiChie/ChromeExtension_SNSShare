@@ -1,5 +1,6 @@
 const DEFAULT_MASTODON_INSTANCE = 'https://mastodon.social';
 const CHECKED_SERVICES_STORAGE_KEY = 'checkedServices';
+const PENDING_SHARE_CONTEXT_STORAGE_KEY = 'pendingShareContext';
 
 function normalizeMastodonInstance(input) {
   const value = (input || '').trim();
@@ -58,6 +59,11 @@ async function loadCheckedServices() {
   const result = await chrome.storage.local.get(CHECKED_SERVICES_STORAGE_KEY);
   const savedValue = result[CHECKED_SERVICES_STORAGE_KEY];
   return Array.isArray(savedValue) ? savedValue : [];
+}
+
+async function loadPendingShareContext() {
+  const result = await chrome.storage.local.get(PENDING_SHARE_CONTEXT_STORAGE_KEY);
+  return result[PENDING_SHARE_CONTEXT_STORAGE_KEY] || null;
 }
 
 async function getActiveTab() {
@@ -195,6 +201,7 @@ async function init() {
   let tab, mastodonInstance;
 
   try {
+    const pendingContext = await loadPendingShareContext();
     tab = await getActiveTab();
     if (!tab || !tab.url) {
       throw new Error('現在のタブのURLを取得できませんでした。');
@@ -204,9 +211,15 @@ async function init() {
     }
     const storage = await chrome.storage.sync.get('mastodonInstance');
     mastodonInstance = storage.mastodonInstance || DEFAULT_MASTODON_INSTANCE;
-    const defaultText = await buildDefaultShareText(tab);
+    let defaultText = await buildDefaultShareText(tab);
+    if (pendingContext && pendingContext.url === tab.url) {
+      defaultText = pendingContext.text || defaultText;
+      pageInfo.textContent = `タイトル: ${pendingContext.title || tab?.title || '(取得不可)'}\nURL: ${pendingContext.url || tab?.url || '(取得不可)'}\n右クリックメニューから開きました。内容を確認して共有してください。`;
+      await chrome.storage.local.remove(PENDING_SHARE_CONTEXT_STORAGE_KEY);
+    } else {
+      pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
+    }
     shareText.value = defaultText;
-    pageInfo.textContent = `タイトル: ${tab?.title || '(取得不可)'}\nURL: ${tab?.url || '(取得不可)'}`;
   } catch (error) {
     pageInfo.textContent = error.message;
     return;
