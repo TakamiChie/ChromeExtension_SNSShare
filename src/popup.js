@@ -72,6 +72,16 @@ async function getActiveTab() {
   return tab;
 }
 
+function normalizeComparableUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const normalizedPath = parsed.pathname.replace(/\/$/, '') || '/';
+    return `${parsed.origin}${normalizedPath}${parsed.search}`;
+  } catch {
+    return '';
+  }
+}
+
 function isInstagramPostPage(url) {
   try {
     const parsed = new URL(url);
@@ -137,15 +147,19 @@ function extractInstagramPostBody(description) {
   return normalizedBody.slice(0, 100).trim();
 }
 
-async function getOgDescription(tabId) {
+async function getOgMeta(tabId) {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId },
     func: () => {
-      const meta = document.querySelector('meta[property="og:description"]');
-      return meta?.getAttribute('content')?.trim() || '';
+      const descriptionMeta = document.querySelector('meta[property="og:description"]');
+      const urlMeta = document.querySelector('meta[property="og:url"]');
+      return {
+        description: descriptionMeta?.getAttribute('content')?.trim() || '',
+        ogUrl: urlMeta?.getAttribute('content')?.trim() || ''
+      };
     }
   });
-  return result?.result || '';
+  return result?.result || { description: '', ogUrl: '' };
 }
 
 async function buildDefaultShareText(tab) {
@@ -153,15 +167,17 @@ async function buildDefaultShareText(tab) {
     return createShareText(tab.title || tab.url, tab.url);
   }
 
-  let description = await getOgDescription(tab.id);
-  if (!description) {
+  let ogMeta = await getOgMeta(tab.id);
+  const currentPageUrl = normalizeComparableUrl(tab.url);
+  const currentOgUrl = normalizeComparableUrl(ogMeta.ogUrl);
+  if (!ogMeta.description || !currentOgUrl || currentPageUrl !== currentOgUrl) {
     const waitLoadPromise = waitForTabComplete(tab.id);
     await chrome.tabs.reload(tab.id);
     await waitLoadPromise;
-    description = await getOgDescription(tab.id);
+    ogMeta = await getOgMeta(tab.id);
   }
 
-  const postBody = extractInstagramPostBody(description);
+  const postBody = extractInstagramPostBody(ogMeta.description);
   return createShareText(postBody || tab.title || tab.url, tab.url);
 }
 
