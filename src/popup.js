@@ -192,6 +192,8 @@ async function init() {
   const pageInfo = document.getElementById('pageInfo');
   const shareText = document.getElementById('shareText');
   const shareButton = document.getElementById('shareButton');
+  const copyButton = document.getElementById('copyButton');
+  const actionStatus = document.getElementById('actionStatus');
   const openOptionsButton = document.getElementById('openOptions');
 
   let tab, mastodonInstance;
@@ -254,6 +256,21 @@ async function init() {
       await Promise.all(checkedServices.map((service) => openIntent(service, text, tab.url, mastodonInstance)));
     } catch (error) {
       pageInfo.textContent = error.message;
+    }
+  });
+
+  copyButton.addEventListener('click', async () => {
+    const text = shareText.value;
+    if (!text.trim()) {
+      actionStatus.textContent = 'コピーするテキストを入力してください。';
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      actionStatus.textContent = 'テキストをクリップボードにコピーしました。';
+    } catch {
+      actionStatus.textContent = 'クリップボードへのコピーに失敗しました。';
     }
   });
 

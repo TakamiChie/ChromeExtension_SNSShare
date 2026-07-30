@@ -54,8 +54,14 @@ textarea {
   box-sizing: border-box;
 }
 
-.secondary {
-  width: 100%;
+.action-buttons {
+  margin-top: 12px;
+}
+
+.action-status {
+  min-height: 1.5em;
+  margin: 6px 0 0;
+  font-size: 12px;
 }
 
 .footer {
