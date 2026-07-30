@@ -47,7 +47,9 @@ function createIntentUrl(service, text, url, mastodonInstance) {
       return intent.toString();
     }
     case 'mixi2': {
-      return 'https://mixi.social/';
+      const intent = new URL('https://mixi.social/home');
+      intent.searchParams.set('text', text);
+      return intent.toString();
     }
     default:
       throw new Error(`Unsupported service: ${service}`);
@@ -182,13 +184,8 @@ async function buildDefaultShareText(tab) {
 }
 
 async function openIntent(service, text, url, mastodonInstance) {
-  if (service === 'mixi2') {
-    await navigator.clipboard.writeText(text);
-    await chrome.tabs.create({ url: 'https://mixi.social/' });
-  } else {
-    const intentUrl = createIntentUrl(service, text, url, mastodonInstance);
-    await chrome.tabs.create({ url: intentUrl });
-  }
+  const intentUrl = createIntentUrl(service, text, url, mastodonInstance);
+  await chrome.tabs.create({ url: intentUrl });
 }
 
 async function init() {
