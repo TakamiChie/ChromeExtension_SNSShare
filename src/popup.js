@@ -27,7 +27,6 @@ function createIntentUrl(service, text, url, mastodonInstance) {
     case 'x': {
       const intent = new URL('https://twitter.com/intent/tweet');
       intent.searchParams.set('text', text);
-      intent.searchParams.set('url', url);
       return intent.toString();
     }
     case 'bluesky': {
